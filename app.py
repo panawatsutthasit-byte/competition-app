@@ -11,6 +11,15 @@ def env_bool(key: str, default: bool = False) -> bool:
 # พาธ DB: ถ้าอยู่บน Render ให้ตั้งเป็น /var/data/app.db ผ่าน ENV
 DB_PATH = os.environ.get("DB_PATH", "app.db")
 
+# ให้แน่ใจว่าโฟลเดอร์ของ DB มีอยู่ (เช่น /var/data)
+_db_dir = os.path.dirname(DB_PATH)
+if _db_dir:
+    os.makedirs(_db_dir, exist_ok=True)
+
+# พาธของไฟล์ schema.sql แบบ absolute (กันปัญหาบน Render/Gunicorn)
+BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
+SCHEMA_PATH = os.path.join(BASE_DIR, "schema.sql")
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
 
@@ -61,7 +70,7 @@ def init_db():
     con = get_db()
 
     if first_time:
-        with open("schema.sql", "r", encoding="utf-8") as f:
+        with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
             con.executescript(f.read())
         # seed categories
         cats = [
@@ -96,6 +105,12 @@ def init_db():
     con.execute("CREATE INDEX IF NOT EXISTS idx_participant_school ON participant(school_id)")
     con.commit()
     con.close()
+
+# เรียก init_db ตอน import เพื่อให้ตารางถูกสร้างบน Render/Gunicorn ด้วย
+try:
+    init_db()
+except Exception as e:
+    print(f"[WARN] init_db() at import: {e}", flush=True)
 
 # ---------------------- Health check (สำหรับ Render/Load balancer) ----------------------
 @app.route("/healthz")
@@ -451,7 +466,7 @@ def _open_in_chrome():
 
 # ---------------------- Main ----------------------
 if __name__ == "__main__":
-    init_db()
+    # init_db()  # เรียกตอน import แล้ว ด้านบน; จะคงไว้ก็ไม่เป็นไร
     if OPEN_BROWSER and os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         threading.Timer(1.0, _open_in_chrome).start()
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=DEBUG_MODE)
