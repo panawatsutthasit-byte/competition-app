@@ -1,0 +1,23 @@
+# Python bytecode / cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+
+# Local secrets (ถ้ามี)
+.env
+
+# Local database (ไม่ต้องอัปโหลดขึ้น repo/เซิร์ฟเวอร์)
+app.db
+
+# Editor / OS junk
+.vscode/
+*.code-workspace
+.DS_Store
+Thumbs.db
+
+# Logs (เผื่ออนาคต)
+*.log

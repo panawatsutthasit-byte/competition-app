@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block body_class %}dashboard{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  /* พื้นหลังหน้า Dashboard: ไล่เฉด + ลายจุดจาง */
+  body.dashboard{
+    --bg-top:#f8fbff; --bg-mid:#ffffff;
+    background:
+      radial-gradient(14px 14px at 24% 28%, rgba(13,110,253,.06) 22%, transparent 23%) repeat,
+      radial-gradient(14px 14px at 76% 72%, rgba(32,201,151,.06) 22%, transparent 23%) repeat,
+      linear-gradient(180deg, var(--bg-top) 0%, var(--bg-mid) 55%);
+    background-size: 30px 30px, 30px 30px, auto;
+  }
+
+  /* Header แบบ glass */
+  .page-header{
+    border-radius:.75rem;
+    background:
+      radial-gradient(800px 260px at 0% -20%, rgba(13,110,253,.06), transparent 60%),
+      radial-gradient(600px 220px at 110% 0%, rgba(32,201,151,.06), transparent 70%),
+      linear-gradient(180deg,#f7f9fc 0%, #fff 60%);
+    border:1px solid rgba(0,0,0,.05);
+  }
+
+  .card.soft{ border:0; border-radius:1rem; box-shadow:0 .25rem 1rem rgba(0,0,0,.06); }
+
+  /* ฟอร์มกรอง: ขนาดเล็ก/กะทัดรัด */
+  .filter .input-group.input-group-sm .input-group-text{ background:#f8f9fa; }
+  .btn-slim{ padding:.42rem .9rem; font-size:.95rem; border-radius:.6rem; }
+  .chip{display:inline-flex; align-items:center; gap:.35rem; background:#f1f3f5; color:#495057;
+        border:1px solid rgba(0,0,0,.08); border-radius:999px; padding:.25rem .6rem; font-size:.9rem;}
+
+  /* KPI การ์ด */
+  .kpi{ position:relative; overflow:hidden; }
+  .kpi .icon{ width:40px; height:40px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; }
+  .kpi .value{ font-size:2rem; line-height:1; font-weight:700; }
+  .kpi--schools .icon{ background:rgba(13,110,253,.12); color:#0d6efd; }
+  .kpi--participants .icon{ background:rgba(32,201,151,.12); color:#20c997; }
+  .kpi--results .icon{ background:rgba(255,193,7,.18); color:#b8860b; }
+  .kpi--complete .icon{ background:rgba(25,135,84,.15); color:#198754; }
+
+  /* ตาราง */
+  .table-hover tbody tr:hover{ background:#fafcff; }
+
+  /* กล่องครอบกราฟ – แก้ปัญหากราฟสูงยาว */
+  .chart-box{
+    position:relative;
+    height: 340px;   /* ปรับได้ตามต้องการ */
+  }
+  @media (max-width: 576px){
+    .chart-box{ height: 260px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="page-header p-4 mb-4">
+  <h3 class="mb-1"><i class="bi bi-speedometer2 text-primary me-2"></i>Dashboard สรุป</h3>
+  <p class="text-muted mb-0">กรองช่วงวันที่เพื่อดูสรุปการสมัคร บันทึกผล และอันดับรวม</p>
+</div>
+
+<!-- ฟอร์มกรองช่วงวันที่ -->
+<div class="card soft mb-4">
+  <div class="card-body">
+    <h6 class="card-title mb-3 text-secondary"><i class="bi bi-funnel me-2"></i>ตัวกรอง</h6>
+    <form method="get" class="row g-3 filter">
+      <div class="col-md-3">
+        <label class="form-label">ตั้งแต่วันที่</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
+          <input type="date" name="date_from" class="form-control" value="{{ date_from or '' }}">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">ถึงวันที่</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-calendar2-event"></i></span>
+          <input type="date" name="date_to" class="form-control" value="{{ date_to or '' }}">
+        </div>
+      </div>
+
+      <div class="col-12 d-flex justify-content-end gap-2">
+        <button class="btn btn-primary btn-slim"><i class="bi bi-funnel"></i> กรองข้อมูล</button>
+        <a class="btn btn-outline-secondary btn-slim" href="{{ url_for('dashboard') }}"><i class="bi bi-x-circle"></i> ล้างตัวกรอง</a>
+      </div>
+
+      {% if date_from or date_to %}
+      <div class="col-12">
+        <span class="chip"><i class="bi bi-calendar-week"></i>
+          {% if date_from %}ตั้งแต่ {{ date_from }}{% endif %}
+          {% if date_from and date_to %} ถึง {% endif %}
+          {% if date_to %}{{ date_to }}{% endif %}
+        </span>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<!-- KPI หลัก -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card soft p-3 kpi kpi--schools">
+      <div class="d-flex align-items-center gap-3">
+        <div class="icon"><i class="bi bi-building"></i></div>
+        <div>
+          <div class="text-muted small">จำนวนโรงเรียน</div>
+          <div class="value">{{ total_schools }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card soft p-3 kpi kpi--participants">
+      <div class="d-flex align-items-center gap-3">
+        <div class="icon"><i class="bi bi-people"></i></div>
+        <div>
+          <div class="text-muted small">ผู้เข้าร่วมทั้งหมด</div>
+          <div class="value">{{ total_participants }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card soft p-3 kpi kpi--results">
+      <div class="d-flex align-items-center gap-3">
+        <div class="icon"><i class="bi bi-trophy"></i></div>
+        <div>
+          <div class="text-muted small">ผลที่บันทึกแล้ว</div>
+          <div class="value">{{ results_count }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card soft p-3 kpi kpi--complete">
+      <div class="d-flex align-items-center gap-3">
+        <div class="icon"><i class="bi bi-patch-check"></i></div>
+        <div>
+          <div class="text-muted small">ความครบถ้วนของผล (%)</div>
+          <div class="value">{{ completion_pct }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- กราฟผู้เข้าร่วมต่อประเภท -->
+<div class="card soft p-3 mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <b>ผู้เข้าร่วมแยกตามประเภท</b>
+    <span class="text-muted small">หน่วย: คน / โรงเรียน</span>
+  </div>
+  <!-- ใช้กล่องกำหนดความสูงแทนการใส่ height บน canvas -->
+  <div class="chart-box">
+    <canvas id="catChart"></canvas>
+  </div>
+</div>
+
+<!-- ตารางผู้เข้าร่วมแยกตามประเภท -->
+<div class="card soft mb-4">
+  <div class="card-body">
+    <h6 class="card-title mb-3 text-secondary"><i class="bi bi-grid me-2"></i>ผู้เข้าร่วมแยกตามประเภท</h6>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>ประเภท</th>
+            <th style="width:14rem">จำนวนโรงเรียนที่เข้าร่วม</th>
+            <th style="width:14rem">จำนวนผู้เข้าร่วม</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in by_category %}
+            <tr>
+              <td>{{ r.name }}</td>
+              <td>{{ r.schools }}</td>
+              <td>{{ r.participants }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Top 5 โรงเรียนตามเหรียญ -->
+  <div class="col-lg-7">
+    <div class="card soft h-100">
+      <div class="card-body">
+        <h6 class="card-title mb-3 text-secondary"><i class="bi bi-trophy-fill me-2 text-warning"></i>Top 5 โรงเรียนตามเหรียญ</h6>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr><th>โรงเรียน</th><th>🥇</th><th>🥈</th><th>🥉</th><th>รวม</th></tr>
+            </thead>
+            <tbody>
+              {% if top_schools %}
+                {% for s in top_schools %}
+                <tr>
+                  <td>{{ s.school }}</td>
+                  <td>{{ s.gold }}</td>
+                  <td>{{ s.silver }}</td>
+                  <td>{{ s.bronze }}</td>
+                  <td>{{ s.total }}</td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr><td colspan="5" class="text-muted text-center py-4">ยังไม่มีผลการแข่งขันในช่วงที่เลือก</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- งานค้าง (ยังไม่มีผล) -->
+  <div class="col-lg-5">
+    <div class="card soft h-100">
+      <div class="card-body">
+        <h6 class="card-title mb-3 text-secondary"><i class="bi bi-hourglass-split me-2"></i>ผู้เข้าร่วมที่ยังไม่มีผล ({{ pending_count }})</h6>
+        <ul class="list-group">
+          {% if pending_list %}
+            {% for p in pending_list %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <div><b>{{ p.fullname }}</b></div>
+                  <div class="small text-muted">{{ p.school }} • {{ p.category }}</div>
+                </div>
+              </li>
+            {% endfor %}
+          {% else %}
+            <li class="list-group-item text-muted">ครบถ้วนแล้วในช่วงที่เลือก 🎉</li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+  const catLabels    = JSON.parse('{{ cat_labels|tojson|safe }}');
+  const catCounts    = JSON.parse('{{ cat_counts|tojson|safe }}');    // ผู้เข้าร่วม
+  const schoolCounts = JSON.parse('{{ school_counts|tojson|safe }}'); // โรงเรียน
+
+  const ctx = document.getElementById('catChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: catLabels,
+      datasets: [
+        { label: 'ผู้เข้าร่วม', data: catCounts, backgroundColor: 'rgba(13,110,253,.35)', borderColor: 'rgba(13,110,253,.8)', borderWidth: 1 },
+        { label: 'โรงเรียนที่เข้าร่วม', data: schoolCounts, backgroundColor: 'rgba(32,201,151,.35)', borderColor: 'rgba(32,201,151,.8)', borderWidth: 1 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,   // ใช้ความสูงจาก .chart-box
+      resizeDelay: 120,
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      plugins: { legend: { position: 'top' } }
+    }
+  });
+</script>
+{% endblock %}

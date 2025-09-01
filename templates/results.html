@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block body_class %}results{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  /* พื้นหลังหน้า Results: ไล่เฉด + ลายจุดจาง */
+  body.results{
+    --bg-top:#f8fbff; --bg-mid:#ffffff;
+    background:
+      radial-gradient(14px 14px at 24% 28%, rgba(13,110,253,.06) 22%, transparent 23%) repeat,
+      radial-gradient(14px 14px at 76% 72%, rgba(32,201,151,.06) 22%, transparent 23%) repeat,
+      linear-gradient(180deg, var(--bg-top) 0%, var(--bg-mid) 55%);
+    background-size: 30px 30px, 30px 30px, auto;
+  }
+
+  /* Header อ่อนโยน */
+  .page-header{
+    border-radius:.75rem;
+    background:
+      radial-gradient(800px 260px at 0% -20%, rgba(13,110,253,.06), transparent 60%),
+      radial-gradient(600px 220px at 110% 0%, rgba(32,201,151,.06), transparent 70%),
+      linear-gradient(180deg,#f7f9fc 0%, #fff 60%);
+    border:1px solid rgba(0,0,0,.05);
+  }
+
+  /* การ์ดสวย ๆ */
+  .card.soft{ border:0; border-radius:1rem; box-shadow:0 .25rem 1rem rgba(0,0,0,.06); }
+  .card.soft .card-title{ font-weight:700; }
+
+  /* กล่องไอคอนใน input */
+  .input-group-text{ background:#f8f9fa; }
+
+  /* ชิปสรุปจำนวน (เขียว) */
+  .chip-count{
+    display:inline-flex; align-items:center; gap:.35rem;
+    background:rgba(25,135,84,.1); color:#198754;
+    border:1px solid rgba(25,135,84,.2);
+    border-radius:999px; padding:.25rem .6rem; font-size:.9rem;
+  }
+
+  /* ปุ่มหลักใหญ่ขึ้นนิด */
+  .btn-lg-lite{ padding:.6rem 1.05rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="page-header p-4 mb-4">
+  <h3 class="mb-1">บันทึกผลการแข่งขัน</h3>
+  <p class="text-muted mb-0">เลือกตัวกรองเพื่อค้นหาผู้เข้าแข่งขัน แล้วกรอกอันดับ/คะแนน/หมายเหตุ จากนั้นกด “บันทึกผล”</p>
+</div>
+
+<!-- ตัวกรองรายชื่อ -->
+<div class="card soft mb-4">
+  <div class="card-body">
+    <h5 class="card-title mb-3"><i class="bi bi-funnel me-2 text-primary"></i>ตัวกรองรายชื่อ</h5>
+
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label">วันที่แข่งขัน (แสดงเฉพาะวันนั้น)</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
+          <input type="date" name="comp_date" class="form-control" value="{{ comp_date or '' }}">
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">ประเภทการแข่งขัน</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-collection"></i></span>
+          <select name="category_id" class="form-select">
+            <option value="">-- ทุกประเภท --</option>
+            {% for c in categories %}
+              <option value="{{ c.id }}" {% if selected_cat==c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">ค้นหา (ชื่อ/โรงเรียน)</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" name="q" class="form-control" value="{{ q or '' }}" placeholder="พิมพ์บางส่วน">
+        </div>
+      </div>
+
+      <div class="col-12 d-flex flex-wrap gap-2">
+        <button class="btn btn-primary btn-lg-lite"><i class="bi bi-funnel-fill me-1"></i> กรองรายชื่อ</button>
+        <a class="btn btn-outline-secondary btn-lg-lite" href="{{ url_for('results') }}"><i class="bi bi-x-circle me-1"></i> ล้างตัวกรอง</a>
+      </div>
+
+      {% if comp_date or selected_cat or q %}
+      <div class="col-12">
+        <!-- แสดงเฉพาะชิปสีเขียว (จำนวนที่พบ) -->
+        <span class="chip-count"><i class="bi bi-people"></i> พบ {{ participants|length }} รายการ</span>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<!-- ฟอร์มบันทึกผล -->
+<div class="card soft">
+  <div class="card-body">
+    <h5 class="card-title mb-3"><i class="bi bi-trophy me-2 text-warning"></i>บันทึกผล</h5>
+
+    <form method="post" class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">ผู้เข้าแข่งขัน</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+          <select name="participant_id" class="form-select" {% if not participants %}disabled{% endif %}>
+            {% for p in participants %}
+              <option value="{{ p.id }}">#{{ p.id }} — {{ p.fullname }} | {{ p.school }} ({{ p.category }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% if not participants %}
+          <div class="form-text text-danger mt-1">
+            ไม่พบรายชื่อภายใต้เงื่อนไขที่เลือก กรุณาปรับตัวกรอง หรือไปหน้า “ลงทะเบียน”
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">อันดับ</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-hash"></i></span>
+          <input type="number" name="rank" min="1" max="10" class="form-control" required>
+        </div>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">คะแนน</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-123"></i></span>
+          <input type="number" step="0.01" name="score" class="form-control" placeholder="เช่น 12.34">
+        </div>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">บันทึกวันที่แข่งขัน</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-calendar-check"></i></span>
+          <input type="date" name="event_date" class="form-control" value="{{ event_default }}" required>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">หมายเหตุ</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-pencil-square"></i></span>
+          <input name="note" class="form-control" placeholder="เช่น รอบชิง / หมายเลขวิ่ง / หมายเหตุเพิ่มเติม">
+        </div>
+      </div>
+
+      <div class="col-12 d-flex flex-wrap gap-2">
+        <button class="btn btn-success btn-lg-lite" {% if not participants %}disabled{% endif %}>
+          <i class="bi bi-save2 me-1"></i> บันทึกผล
+        </button>
+        <a class="btn btn-outline-primary btn-lg-lite" href="{{ url_for('leaderboard') }}">
+          <i class="bi bi-bar-chart-line me-1"></i> ดูผลการแข่งขันทั้งหมด
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

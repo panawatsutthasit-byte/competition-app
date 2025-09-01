@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ title or site_name }}</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Global responsive utilities (ใช้ได้ทุกหน้า) -->
+  <style>
+    /* สื่อทุกชนิดไม่หลุดกรอบ */
+    img, svg, video, canvas { max-width:100%; height:auto; }
+
+    /* กลุ่มปุ่มให้ wrap ได้บนจอเล็ก */
+    .btn-wrap { display:flex; flex-wrap:wrap; gap:.5rem; }
+
+    /* ขนาดหัวเรื่อง/คำโปรยแบบยืดหยุ่น */
+    .fluid-title { font-size: clamp(1.5rem, 1.1rem + 2.5vw, 3rem); }
+    .fluid-lead  { font-size: clamp(1rem, .9rem + .8vw, 1.25rem); }
+
+    /* ตาราง: เลื่อนบนจอเล็ก */
+    .table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; }
+
+    /* กราฟ: คุมอัตราส่วนกันยืดยาว */
+    .chart-wrap{ position:relative; width:100%; aspect-ratio:16/9; }
+    .chart-wrap > canvas{ position:absolute; inset:0;
+      width:100% !important; height:100% !important; }
+
+    /* ฮีโร่สูงอัตโนมัติ */
+    .hero-auto{ min-height: clamp(240px, 32vh, 420px); }
+
+    /* ปุ่มขนาดกะทัดรัด (ใช้ในโซนฟิลเตอร์) */
+    .btn-slim{ padding:.42rem .9rem; font-size:.95rem; border-radius:.6rem; }
+
+    /* สไตล์พิมพ์ขั้นพื้นฐาน (ซ่อนแถบนำทาง/ของที่ติด no-print) */
+    @media print{
+      nav, .no-print { display:none !important; }
+      body { background:#fff !important; }
+    }
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-light {% block body_class %}{% endblock %}">
+
+<nav class="navbar navbar-dark bg-dark navbar-expand-md sticky-top mb-4">
+  <div class="container">
+    <!-- แบรนด์ไปหน้า Home -->
+    <a class="navbar-brand" href="{{ url_for('home') }}">{{ site_name }}</a>
+
+    <!-- hamburger -->
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+            aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="mainNav">
+      <div class="ms-auto d-flex flex-wrap gap-2">
+
+        <!-- หน้าแรก -->
+        <a href="{{ url_for('home') }}"
+           class="btn {{ 'btn-light text-dark' if request.endpoint=='home' else 'btn-outline-light' }}"
+           {% if request.endpoint=='home' %}aria-current="page"{% endif %}>
+          หน้าแรก
+        </a>
+
+        <!-- ลงทะเบียน -->
+        <a href="{{ url_for('register') }}"
+           class="btn {{ 'btn-light text-dark' if request.endpoint=='register' else 'btn-outline-light' }}"
+           {% if request.endpoint=='register' %}aria-current="page"{% endif %}>
+          ลงทะเบียน
+        </a>
+
+        <!-- บันทึกผล (ปุ่มเด่น) -->
+        <a href="{{ url_for('results') }}"
+           class="btn btn-warning {{ 'text-dark' if request.endpoint=='results' else '' }}"
+           {% if request.endpoint=='results' %}aria-current="page"{% endif %}>
+          บันทึกผล
+        </a>
+
+        <!-- ผลการแข่งขัน -->
+        <a href="{{ url_for('leaderboard') }}"
+           class="btn {{ 'btn-light text-dark' if request.endpoint=='leaderboard' else 'btn-outline-light' }}"
+           {% if request.endpoint=='leaderboard' %}aria-current="page"{% endif %}>
+          ผลการแข่งขัน
+        </a>
+
+        <!-- Dashboard -->
+        <a href="{{ url_for('dashboard') }}"
+           class="btn {{ 'btn-light text-dark' if request.endpoint=='dashboard' else 'btn-outline-light' }}"
+           {% if request.endpoint=='dashboard' %}aria-current="page"{% endif %}>
+          Dashboard
+        </a>
+
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      {% for m in messages %}
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+          {{ m }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

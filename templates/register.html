@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block body_class %}register{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  /* พื้นหลังเฉพาะหน้า Register: ไล่เฉด + ลายจุดจางให้ดูนุ่มเหมือนหน้า Home */
+  body.register{
+    --bg-top:#f8fbff; --bg-mid:#ffffff;
+    background:
+      radial-gradient(14px 14px at 24% 28%, rgba(13,110,253,.06) 22%, transparent 23%) repeat,
+      radial-gradient(14px 14px at 76% 72%, rgba(32,201,151,.06) 22%, transparent 23%) repeat,
+      linear-gradient(180deg, var(--bg-top) 0%, var(--bg-mid) 55%);
+    background-size: 30px 30px, 30px 30px, auto;
+  }
+
+  /* หัวข้อเบา ๆ ให้เข้าธีม */
+  .page-header{
+    border-radius:.75rem;
+    background:
+      radial-gradient(800px 260px at 0% -20%, rgba(13,110,253,.06), transparent 60%),
+      radial-gradient(600px 220px at 110% 0%, rgba(32,201,151,.06), transparent 70%),
+      linear-gradient(180deg,#f7f9fc 0%, #fff 60%);
+    border:1px solid rgba(0,0,0,.05);
+  }
+
+  /* การ์ดฟอร์ม & การ์ดด้านข้าง */
+  .card.soft{ border:0; border-radius:1rem; box-shadow:0 .25rem 1rem rgba(0,0,0,.06); }
+  .card.soft .card-title{ font-weight:700; }
+
+  /* ไอคอนใน input group ให้ดูนุ่ม */
+  .input-group-text{ background:#f8f9fa; }
+
+  /* ปุ่มหลักใหญ่ขึ้นนิด */
+  .btn-xl{ padding:.7rem 1.2rem; font-size:1.05rem; }
+
+  /* bullet list สวยขึ้น */
+  .hint li{ margin:.4rem 0; color:#6c757d; }
+
+  /* แสดง * ที่ label ของช่องบังคับ */
+  .form-label.required::after{
+    content:" *"; color:#dc3545; font-weight:700;
+  }
+
+  /* กลุ่มปุ่มให้ wrap บนจอเล็ก (สอดคล้องกับ .btn-wrap ใน base) */
+  .btn-wrap{ display:flex; flex-wrap:wrap; gap:.5rem; }
+</style>
+
+<script>
+  // เปิดใช้ Bootstrap validation แบบ client-side
+  document.addEventListener('DOMContentLoaded', function(){
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form=>{
+      form.addEventListener('submit', function(e){
+        if(!form.checkValidity()){ e.preventDefault(); e.stopPropagation(); }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  });
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<section class="page-header p-4 mb-4" aria-label="หัวข้อหน้าลงทะเบียน">
+  <h3 class="mb-1">ระบบลงทะเบียนเข้าร่วมการแข่งขัน</h3>
+  <p class="text-muted mb-0">กรอกข้อมูลผู้เข้าแข่งขันให้ครบถ้วน แล้วกด “บันทึกการลงทะเบียน”</p>
+</section>
+
+<div class="row g-4">
+  <!-- ฟอร์มหลัก -->
+  <div class="col-lg-8">
+    <div class="card soft">
+      <div class="card-body">
+        <h5 class="card-title mb-3"><i class="bi bi-person-plus me-2 text-primary"></i>ข้อมูลผู้เข้าแข่งขัน</h5>
+
+        <form method="post" class="row g-3 needs-validation" novalidate>
+          <!-- ชื่อ -->
+          <div class="col-md-4">
+            <label class="form-label required">ชื่อ</label>
+            <div class="input-group">
+              <span class="input-group-text" aria-hidden="true"><i class="bi bi-person"></i></span>
+              <input name="first_name" class="form-control" placeholder="เช่น ธนัชพร"
+                     required autocomplete="given-name" autofocus>
+              <div class="invalid-feedback">กรุณากรอกชื่อ</div>
+            </div>
+          </div>
+
+          <!-- นามสกุล -->
+          <div class="col-md-4">
+            <label class="form-label required">นามสกุล</label>
+            <div class="input-group">
+              <span class="input-group-text" aria-hidden="true"><i class="bi bi-person-vcard"></i></span>
+              <input name="last_name" class="form-control" placeholder="เช่น พันธ์แดง"
+                     required autocomplete="family-name">
+              <div class="invalid-feedback">กรุณากรอกนามสกุล</div>
+            </div>
+          </div>
+
+          <!-- โรงเรียน -->
+          <div class="col-md-4">
+            <label class="form-label required">โรงเรียน</label>
+            <div class="input-group">
+              <span class="input-group-text" aria-hidden="true"><i class="bi bi-building"></i></span>
+              <input name="school" class="form-control" placeholder="พิมพ์ชื่อโรงเรียน"
+                     list="school_list" required autocomplete="organization">
+              <div class="invalid-feedback">กรุณาระบุโรงเรียน</div>
+            </div>
+            <datalist id="school_list">
+              <option value="โรงเรียนตัวอย่าง A">
+              <option value="โรงเรียนตัวอย่าง B">
+              <option value="วิทยาลัยตัวอย่าง C">
+            </datalist>
+          </div>
+
+          <!-- ประเภทการแข่งขัน -->
+          <div class="col-md-6">
+            <label class="form-label required">ประเภทการแข่งขัน</label>
+            <div class="input-group">
+              <span class="input-group-text" aria-hidden="true"><i class="bi bi-collection"></i></span>
+              <select name="category_id" class="form-select" required>
+                {% for c in categories %}
+                  <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+              </select>
+              <div class="invalid-feedback">กรุณาเลือกประเภทการแข่งขัน</div>
+            </div>
+          </div>
+
+          <!-- วันที่แข่งขัน -->
+          <div class="col-md-6">
+            <label class="form-label required">วันที่แข่งขัน</label>
+            <div class="input-group">
+              <span class="input-group-text" aria-hidden="true"><i class="bi bi-calendar-event"></i></span>
+              <input type="date" name="competition_date" class="form-control"
+                     value="{{ today }}" min="{{ today }}" required>
+              <div class="invalid-feedback">กรุณาเลือกวันที่แข่งขัน</div>
+            </div>
+            <div class="form-text">ค่าเริ่มต้นเป็นวันที่วันนี้ — สามารถปรับเป็นวันที่แข่งจริงได้</div>
+          </div>
+
+          <div class="col-12 btn-wrap">
+            <button class="btn btn-primary btn-xl">
+              <i class="bi bi-save me-1"></i> บันทึกการลงทะเบียน
+            </button>
+            <a href="{{ url_for('leaderboard') }}" class="btn btn-outline-secondary">
+              ดูผลการแข่งขัน
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- การ์ดคำแนะนำ -->
+  <div class="col-lg-4">
+    <div class="card soft h-100">
+      <div class="card-body">
+        <h6 class="text-uppercase text-muted mb-3">คำแนะนำ</h6>
+        <ul class="hint list-unstyled mb-3">
+          <li><i class="bi bi-check2-circle text-success me-2"></i>ระบบป้องกัน “สมัครซ้ำ” (คน/ประเภท/วันเดียวกัน)</li>
+          <li><i class="bi bi-clipboard2-check me-2 text-primary"></i>กรอกชื่อ–นามสกุลให้ตรงตามบัตร/รายชื่อแข่งขัน</li>
+          <li><i class="bi bi-calendar2-week me-2 text-warning"></i>เลือกวันที่แข่งขันให้ถูกต้อง เพื่อบันทึกผลได้ง่ายในภายหลัง</li>
+        </ul>
+        <div class="alert alert-info mb-0">
+          <i class="bi bi-lightbulb me-1"></i>
+          เคล็ดลับ: ใช้ช่องค้นหาชื่อโรงเรียน (datalist) เพื่อกรอกได้เร็วขึ้น
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

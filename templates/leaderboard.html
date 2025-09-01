@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block body_class %}leaderboard{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  /* พื้นหลัง */
+  body.leaderboard{
+    --bg-top:#f8fbff; --bg-mid:#ffffff;
+    background:
+      radial-gradient(14px 14px at 24% 28%, rgba(13,110,253,.06) 22%, transparent 23%) repeat,
+      radial-gradient(14px 14px at 76% 72%, rgba(32,201,151,.06) 22%, transparent 23%) repeat,
+      linear-gradient(180deg, var(--bg-top) 0%, var(--bg-mid) 55%);
+    background-size: 30px 30px, 30px 30px, auto;
+  }
+
+  .page-header{
+    border-radius:.75rem;
+    background:
+      radial-gradient(800px 260px at 0% -20%, rgba(13,110,253,.06), transparent 60%),
+      radial-gradient(600px 220px at 110% 0%, rgba(32,201,151,.06), transparent 70%),
+      linear-gradient(180deg,#f7f9fc 0%, #fff 60%);
+    border:1px solid rgba(0,0,0,.05);
+  }
+
+  .card.soft{ border:0; border-radius:1rem; box-shadow:0 .25rem 1rem rgba(0,0,0,.06); }
+  .card.soft .card-title{ font-weight:700; }
+
+  .table-hover tbody tr:hover{ background:#fafcff; }
+  table.table thead th{ white-space:nowrap; }
+
+  /* thead sticky บนหน้าจอ (ไม่กระทบตอนพิมพ์) */
+  .table-sticky thead th{
+    position: sticky; top: 0; z-index: 1;
+    background: #f8f9fa; /* ให้สีคงที่เมื่อ sticky */
+  }
+
+  /* ชิป */
+  .chip{display:inline-flex; align-items:center; gap:.35rem; background:#f1f3f5; color:#495057;
+        border:1px solid rgba(0,0,0,.08); border-radius:999px; padding:.25rem .6rem; font-size:.9rem;}
+  .chip + .chip{ margin-left:.35rem; }
+  .chip-count{display:inline-flex; align-items:center; gap:.35rem; background:rgba(25,135,84,.1); color:#198754;
+              border:1px solid rgba(25,135,84,.2); border-radius:999px; padding:.25rem .6rem; font-size:.9rem;}
+
+  /* อันดับ */
+  .rank{display:inline-flex; align-items:center; gap:.35rem; padding:.2rem .5rem; border-radius:999px; font-weight:600;}
+  .rank--gold   { color:#b8860b; background:rgba(255,193,7,.15);   border:1px solid rgba(255,193,7,.35); }
+  .rank--silver { color:#6c757d; background:rgba(108,117,125,.12); border:1px solid rgba(108,117,125,.28); }
+  .rank--bronze { color:#a5673f; background:rgba(173,125,88,.14);   border:1px solid rgba(173,125,88,.32); }
+  .rank--num    { color:#495057; background:#f1f3f5; border:1px solid rgba(0,0,0,.08); }
+
+  /* โซนตัวกรอง – ย่อให้เล็ก */
+  .filter-form .input-group.input-group-sm .input-group-text{ background:#f8f9fa; }
+  .btn-slim{ padding:.42rem .9rem; font-size:.95rem; border-radius:.6rem; }
+  .btn-slim .bi{ margin-right:.25rem; }
+
+  /* --------- Print styles --------- */
+  .print-only{ display:none; }              /* ซ่อนหัวรายงานบนจอ */
+  @page{ size: A4; margin: 12mm; }          /* แนวตั้ง (ใช้ A4 landscape; ถ้าต้องการแนวนอน) */
+  @media print{
+    nav, .page-header, .filter-card, .no-print{ display:none !important; }  /* ซ่อนส่วนที่ไม่พิมพ์ */
+    body{ background:#fff !important; }
+    .card.soft{ box-shadow:none !important; border:0 !important; }
+    .print-only{ display:block !important; }      /* แสดงหัวรายงานเฉพาะตอนพิมพ์ */
+    .print-header{ margin-bottom:10px; border-bottom:1px solid #ddd; padding-bottom:8px; }
+    .print-meta{ font-size:12px; color:#555; }
+    .table-responsive{ overflow:visible !important; } /* กันตารางถูกตัด */
+    .table{ font-size:12pt; width:100%; }
+    thead{ display:table-header-group; } tfoot{ display:table-footer-group; }
+    tr, td, th{ page-break-inside:avoid; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="page-header p-4 mb-4">
+  <h3 class="mb-1"><i class="bi bi-trophy-fill text-warning me-2"></i>ผลการแข่งขัน</h3>
+  <p class="text-muted mb-0">กรองเพื่อดูผลตามประเภท/โรงเรียน/ช่วงวันที่ แล้วเลื่อนดูตารางด้านล่าง</p>
+</div>
+
+<!-- ฟอร์มตัวกรอง -->
+<div class="card soft mb-4 filter-card">
+  <div class="card-body">
+    <h6 class="card-title mb-3 text-secondary"><i class="bi bi-funnel me-2"></i>ตัวกรอง</h6>
+
+    <form method="get" class="row g-3 filter-form">
+      <div class="col-md-3">
+        <label class="form-label">ประเภทการแข่งขัน</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-collection"></i></span>
+          <select name="category_id" class="form-select">
+            <option value="">-- ทั้งหมด --</option>
+            {% for c in categories %}
+              <option value="{{ c.id }}" {% if selected_cat==c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">ชื่อโรงเรียน (ค้นหา)</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-building"></i></span>
+          <input name="school" class="form-control" value="{{ school_q or '' }}" placeholder="พิมพ์ชื่อโรงเรียนบางส่วน">
+        </div>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">ตั้งแต่วันที่</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
+          <input type="date" name="date_from" class="form-control" value="{{ date_from or '' }}">
+        </div>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">ถึงวันที่</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-calendar2-event"></i></span>
+          <input type="date" name="date_to" class="form-control" value="{{ date_to or '' }}">
+        </div>
+      </div>
+
+      {% if date_from or date_to or selected_cat or school_q %}
+      <div class="col-12">
+        {% set cat = (categories | selectattr('id','equalto',selected_cat) | first) if selected_cat else None %}
+        {% if cat %}<span class="chip"><i class="bi bi-tag"></i> ประเภท {{ cat.name }}</span>{% endif %}
+        {% if school_q %}<span class="chip"><i class="bi bi-mortarboard"></i> โรงเรียน “{{ school_q }}”</span>{% endif %}
+        {% if date_from or date_to %}
+          <span class="chip"><i class="bi bi-calendar-week"></i>
+            ช่วงวันที่
+            {% if date_from %} {{ date_from }} {% endif %}
+            {% if date_from and date_to %} ถึง {% endif %}
+            {% if date_to %} {{ date_to }} {% endif %}
+          </span>
+        {% endif %}
+        <span class="chip-count"><i class="bi bi-people"></i> พบ {{ rows|length }} รายการ</span>
+      </div>
+      {% endif %}
+
+      <!-- ปุ่มชิดขวา แยกบรรทัด -->
+      <div class="col-12 d-flex justify-content-end gap-2">
+        <button class="btn btn-primary btn-slim"><i class="bi bi-funnel"></i>กรองผล</button>
+        <a class="btn btn-outline-secondary btn-slim" href="{{ url_for('leaderboard') }}"><i class="bi bi-x-circle"></i>ล้างตัวกรอง</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ปุ่มพิมพ์ (แสดงเฉพาะหน้าจอ) -->
+<div class="d-flex justify-content-end mb-2 no-print">
+  <button type="button" class="btn btn-outline-secondary btn-slim" onclick="window.print()">
+    <i class="bi bi-printer me-1"></i>พิมพ์ผล
+  </button>
+</div>
+
+<!-- หัวรายงาน (เฉพาะโหมดพิมพ์) -->
+<div class="print-only">
+  <div class="print-header">
+    <div class="h5 mb-1">{{ site_name }} — ผลการแข่งขัน</div>
+    <div class="print-meta">
+      {% set cat = (categories | selectattr('id','equalto',selected_cat) | first) if selected_cat else None %}
+      เงื่อนไข:
+      {% if cat %}ประเภท {{ cat.name }}; {% endif %}
+      {% if school_q %}โรงเรียน “{{ school_q }}”; {% endif %}
+      {% if date_from or date_to %}ช่วงวันที่ {% if date_from %}{{ date_from }}{% endif %}{% if date_from and date_to %} ถึง {% endif %}{% if date_to %}{{ date_to }}{% endif %}; {% endif %}
+      พิมพ์เมื่อ <span id="printedAt">--</span>
+    </div>
+  </div>
+</div>
+
+<!-- ตารางผลการแข่งขัน -->
+<div class="card soft">
+  <div class="card-body">
+    <h6 class="card-title mb-3 text-secondary"><i class="bi bi-list-ol me-2"></i>ตารางผล</h6>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle table-sticky">
+        <thead class="table-light">
+          <tr>
+            <th style="width:7rem">อันดับ</th>
+            <th>ผู้เข้าแข่งขัน</th>
+            <th>โรงเรียน</th>
+            <th>ประเภท</th>
+            <th style="width:8rem">คะแนน</th>
+            <th style="width:10rem">วันที่แข่ง</th>
+            <th>หมายเหตุ</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% if rows %}
+          {% for r in rows %}
+            <tr>
+              <td>
+                {% if r.rank == 1 %}
+                  <span class="rank rank--gold"><i class="bi bi-award-fill"></i> อันดับ 1</span>
+                {% elif r.rank == 2 %}
+                  <span class="rank rank--silver"><i class="bi bi-award-fill"></i> อันดับ 2</span>
+                {% elif r.rank == 3 %}
+                  <span class="rank rank--bronze"><i class="bi bi-award-fill"></i> อันดับ 3</span>
+                {% else %}
+                  <span class="rank rank--num">#{{ r.rank }}</span>
+                {% endif %}
+              </td>
+              <td>{{ r.fullname }}</td>
+              <td>{{ r.school }}</td>
+              <td>{{ r.category }}</td>
+              <td>{{ r.score if r.score is not none else '-' }}</td>
+              <td>{{ r.event_date }}</td>
+              <td>{{ r.note }}</td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-clipboard2-x me-1"></i>ยังไม่มีผลการแข่งขัน</td></tr>
+        {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ใส่เวลาที่พิมพ์ลงในหัวรายงาน (โหมดพิมพ์)
+  (function(){
+    const el = document.getElementById('printedAt');
+    if(el){ el.textContent = new Date().toLocaleString('th-TH'); }
+  })();
+</script>
+
+{% endblock %}
